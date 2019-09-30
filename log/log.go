@@ -34,6 +34,12 @@ func Print(l level, values ...interface{}) {
 		return
 	}
 
+	if l > INFO {
+		log.SetOutput(os.Stderr)
+	} else {
+		log.SetOutput(os.Stdout)
+	}
+
 	log.Println(append([]interface{}{levelWords[l]}, values...)...)
 
 	if l == FATAL {
