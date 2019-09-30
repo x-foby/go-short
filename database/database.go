@@ -56,6 +56,37 @@ func Open(name string) (*sql.DB, error) {
 	return pool[name], err
 }
 
+// OpenCustom устанавливает соединение с базой данных из пула по произвольным параметрам, добавленным к текущим настройкам соединения,
+// если соединение ещё не установлено, и возвращает ссылку на него
+func OpenCustom(name, id string, customParams map[string]interface{}) (*sql.DB, error) {
+	connectionSettings, ok := settings.Pool[name]
+	if !ok {
+		return nil, fmt.Errorf("%q отсутствует в пуле соединений", name)
+	}
+
+	cs := connectionSettings
+	cs.ConnectionStringParams = make(map[string]interface{})
+	for k, v := range connectionSettings.ConnectionStringParams {
+		if param, ok := customParams[k]; ok {
+			cs.ConnectionStringParams[k] = param
+		} else {
+			cs.ConnectionStringParams[k] = v
+		}
+	}
+
+	for k, v := range customParams {
+		if _, ok := cs.ConnectionStringParams[k]; !ok {
+			cs.ConnectionStringParams[k] = v
+		}
+	}
+
+	var err error
+	connName := name + id
+	pool[connName], err = getConn(pool[connName], cs)
+
+	return pool[connName], err
+}
+
 // CloseAll закрывает все соединения
 func CloseAll() {
 	for _, conn := range pool {
@@ -63,27 +94,6 @@ func CloseAll() {
 			conn.Close()
 		}
 	}
-}
-
-// Interpolate закрывает все соединения
-func Interpolate(args []interface{}, env map[string]interface{}) []interface{} {
-	result := make([]interface{}, len(args))
-	for i, arg := range args {
-		argName, ok := arg.(string)
-		if !ok {
-			result[i] = arg
-			continue
-		}
-
-		if argValue, ok := env[argName]; ok {
-			result[i] = argValue
-			continue
-		}
-
-		result[i] = arg
-	}
-
-	return result
 }
 
 func getConn(conn *sql.DB, cs ConnectionSetting) (*sql.DB, error) {
