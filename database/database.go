@@ -3,6 +3,7 @@ package database
 import (
 	"database/sql"
 	"fmt"
+	"sync"
 )
 
 // Command опсиывает настройки запроса
@@ -29,9 +30,51 @@ type Settings struct {
 	Pool map[string]ConnectionSetting `json:"pool"`
 }
 
+// Pool описывает потокобезопасный пул именованных соединений
+type Pool struct {
+	mx sync.RWMutex
+	m  map[string]*sql.DB
+}
+
+// NewPool создаёт новый пул и возвращает указатель на него
+func NewPool() *Pool {
+	return &Pool{
+		m: make(map[string]*sql.DB),
+	}
+}
+
+// Load возвращает соединение из пула
+func (p *Pool) Load(key string) (*sql.DB, bool) {
+	p.mx.RLock()
+	value, ok := p.m[key]
+	p.mx.RUnlock()
+
+	return value, ok
+}
+
+// Store сохраняет соединение в пул
+func (p *Pool) Store(key string, value *sql.DB) {
+	p.mx.Lock()
+	p.m[key] = value
+	p.mx.Unlock()
+}
+
+// Range обходит все соединения, вызывая переданный коллбэк
+func (p *Pool) Range(cb func(key string, value *sql.DB)) {
+	p.mx.Lock()
+	for k, v := range p.m {
+		cb(k, v)
+	}
+	p.mx.Unlock()
+}
+
 var settings Settings
-var pool = make(map[string]*sql.DB)
+var pool *Pool
 var drivers = make(map[string]DriverSetting)
+
+func init() {
+	pool = NewPool()
+}
 
 // GetSettings возвращает указатель на настройки БД
 func GetSettings() *Settings {
@@ -50,15 +93,20 @@ func Open(name string) (*sql.DB, error) {
 		return nil, fmt.Errorf("%q отсутствует в пуле соединений", name)
 	}
 
-	var err error
-	pool[name], err = getConn(pool[name], connectionSettings)
+	conn, _ := pool.Load(name)
+	conn, err := getConn(conn, connectionSettings)
+	if err != nil {
+		return nil, err
+	}
 
-	return pool[name], err
+	pool.Store(name, conn)
+
+	return conn, err
 }
 
 // OpenCustom устанавливает соединение с базой данных из пула по произвольным параметрам, добавленным к текущим настройкам соединения,
 // если соединение ещё не установлено, и возвращает ссылку на него
-func OpenCustom(name, id string, customParams map[string]interface{}) (*sql.DB, error) {
+func OpenCustom(name, ID string, customParams map[string]interface{}) (*sql.DB, error) {
 	connectionSettings, ok := settings.Pool[name]
 	if !ok {
 		return nil, fmt.Errorf("%q отсутствует в пуле соединений", name)
@@ -80,20 +128,30 @@ func OpenCustom(name, id string, customParams map[string]interface{}) (*sql.DB, 
 		}
 	}
 
-	var err error
-	connName := name + id
-	pool[connName], err = getConn(pool[connName], cs)
+	connName := name + ID
 
-	return pool[connName], err
+	conn, _ := pool.Load(connName)
+	conn, err := getConn(conn, connectionSettings)
+	if err != nil {
+		return nil, err
+	}
+
+	pool.Store(connName, conn)
+
+	return conn, err
 }
 
 // CloseAll закрывает все соединения
 func CloseAll() {
-	for _, conn := range pool {
-		if err := conn.Ping(); err != nil {
-			conn.Close()
+	pool.Range(func(k string, v *sql.DB) {
+		if v == nil {
+			return
 		}
-	}
+
+		if err := v.Ping(); err != nil {
+			v.Close()
+		}
+	})
 }
 
 func getConn(conn *sql.DB, cs ConnectionSetting) (*sql.DB, error) {
