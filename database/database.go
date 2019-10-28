@@ -32,40 +32,41 @@ type Settings struct {
 
 // Pool описывает потокобезопасный пул именованных соединений
 type Pool struct {
-	mx sync.RWMutex
-	m  map[string]*sql.DB
+	*sync.RWMutex
+	m map[string]*sql.DB
 }
 
 // NewPool создаёт новый пул и возвращает указатель на него
 func NewPool() *Pool {
 	return &Pool{
-		m: make(map[string]*sql.DB),
+		RWMutex: &sync.RWMutex{},
+		m:       make(map[string]*sql.DB),
 	}
 }
 
 // Load возвращает соединение из пула
 func (p *Pool) Load(key string) (*sql.DB, bool) {
-	p.mx.RLock()
+	p.RLock()
 	value, ok := p.m[key]
-	p.mx.RUnlock()
+	p.RUnlock()
 
 	return value, ok
 }
 
 // Store сохраняет соединение в пул
 func (p *Pool) Store(key string, value *sql.DB) {
-	p.mx.Lock()
+	p.Lock()
 	p.m[key] = value
-	p.mx.Unlock()
+	p.Unlock()
 }
 
 // Range обходит все соединения, вызывая переданный коллбэк
 func (p *Pool) Range(cb func(key string, value *sql.DB)) {
-	p.mx.Lock()
+	p.Lock()
 	for k, v := range p.m {
 		cb(k, v)
 	}
-	p.mx.Unlock()
+	p.Unlock()
 }
 
 var settings Settings
