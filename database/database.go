@@ -132,7 +132,7 @@ func OpenCustom(name, ID string, customParams map[string]interface{}) (*sql.DB, 
 	connName := name + ID
 
 	conn, _ := pool.Load(connName)
-	conn, err := getConn(conn, connectionSettings)
+	conn, err := getConn(conn, cs)
 	if err != nil {
 		return nil, err
 	}
