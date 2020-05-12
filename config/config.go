@@ -1,9 +1,10 @@
 package config
 
 import (
-	"encoding/json"
 	"errors"
 	"io/ioutil"
+
+	"gopkg.in/yaml.v3"
 )
 
 var (
@@ -46,7 +47,7 @@ func WriteToFile() error {
 
 // Update обновляет кофигурации
 func Update(buf []byte) error {
-	return json.Unmarshal(buf, &config)
+	return yaml.Unmarshal(buf, &config)
 }
 
 // Backup сохраняет текущюю конфигурацию
@@ -81,7 +82,7 @@ func writeToFile(fn string) error {
 		return err
 	}
 
-	buf, err := json.MarshalIndent(config, "", "  ")
+	buf, err := yaml.Marshal(config)
 	if err != nil {
 		return err
 	}
