@@ -47,7 +47,7 @@ func WriteToFile() error {
 
 // Update обновляет кофигурации
 func Update(buf []byte) error {
-	return yaml.Unmarshal(buf, &config)
+	return yaml.Unmarshal(buf, config)
 }
 
 // Backup сохраняет текущюю конфигурацию
