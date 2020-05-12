@@ -10,11 +10,11 @@ import (
 
 // Settings описывает настройки веб-сервера
 type Settings struct {
-	Host              string `json:"host,omitempty"`
-	Port              int    `json:"port,omitempty"`
-	ReadTimeout       int64  `json:"readTimeout,omitempty"`
-	ReadHeaderTimeout int64  `json:"readHeaderTimeout,omitempty"`
-	MaxHeaderBytes    int    `json:"maxHeaderBytes,omitempty"`
+	Host              string `json:"host,omitempty" yaml:"host,omitempty"`
+	Port              int    `json:"port,omitempty" yaml:"port,omitempty"`
+	ReadTimeout       int64  `json:"readTimeout,omitempty" yaml:"readTimeout,omitempty"`
+	ReadHeaderTimeout int64  `json:"readHeaderTimeout,omitempty" yaml:"readHeaderTimeout,omitempty"`
+	MaxHeaderBytes    int    `json:"maxHeaderBytes,omitempty" yaml:"maxHeaderBytes,omitempty"`
 }
 
 // Ошибки

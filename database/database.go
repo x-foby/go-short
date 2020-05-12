@@ -8,15 +8,15 @@ import (
 
 // Command опсиывает настройки запроса
 type Command struct {
-	Query string        `json:"query,omitempty"`
-	Args  []interface{} `json:"args,omitempty"`
+	Query string        `json:"query,omitempty" yaml:"query,omitempty"`
+	Args  []interface{} `json:"args,omitempty" yaml:"args,omitempty"`
 }
 
 // ConnectionSetting опсиывает настройки подключения к БД
 type ConnectionSetting struct {
-	Driver                 string                 `json:"driver,omitempty"`
-	ConnectionStringParams map[string]interface{} `json:"connectionStringParams,omitempty"`
-	AfterConnection        []Command              `json:"afterConnection,omitempty"`
+	Driver                 string                 `json:"driver,omitempty" yaml:"driver,omitempty"`
+	ConnectionStringParams map[string]interface{} `json:"connectionStringParams,omitempty" yaml:"connectionStringParams,omitempty"`
+	AfterConnection        []Command              `json:"afterConnection,omitempty" yaml:"afterConnection,omitempty"`
 }
 
 // DriverSetting опсиывает настройки драйвер к БД
@@ -27,7 +27,7 @@ type DriverSetting struct {
 
 // Settings описывает настройки БД по умолчанию и пул соединений
 type Settings struct {
-	Pool map[string]ConnectionSetting `json:"pool"`
+	Pool map[string]ConnectionSetting `json:"pool" yaml:"pool"`
 }
 
 // Pool описывает потокобезопасный пул именованных соединений
